@@ -49,6 +49,7 @@ namespace LoginReg.Controllers
                     //Save your user object to the database
                     dbContext.Add(user);
                     dbContext.SaveChanges();
+                    HttpContext.Session.SetInt32("userId", user.UserId);
 
                     return RedirectToAction("success");
                     //return View("success"); didnt work
@@ -66,48 +67,72 @@ namespace LoginReg.Controllers
             return View();
         }
         [HttpGet("login")]
-        public IActionResult login()
+        public IActionResult Login()
         {
             return View();
         }
-        [HttpPost]
-        [Route("user")]
-        public IActionResult Login(LoginUser userSubmission)
+        // [HttpPost]
+        // [Route("user")]
+        // public IActionResult Login(LoginUser userSubmission)
+        // {
+        //     if(ModelState.IsValid)
+        //     {
+        //         // If inital ModelState is valid, query for a user with provided email
+        //         var userInDb = dbContext.Users.FirstOrDefault(u => u.Email == userSubmission.Email);
+        //         // If no user exists with provided email
+        //         if(userInDb == null)
+        //         {
+        //             // Add an error to ModelState and return to View!
+        //             ModelState.AddModelError("Email", "Invalid Email/Password");
+        //             return RedirectToAction("login");
+        //         }
+                
+        //         // Initialize hasher object
+        //         var hasher = new PasswordHasher<LoginUser>();
+                
+        //         // verify provided password against hash stored in db
+        //         var result = hasher.VerifyHashedPassword(userSubmission, userInDb.Password, userSubmission.Password);
+                
+        //         // result can be compared to 0 for failure
+        //         if(result == 0)
+        //         {
+        //             ModelState.AddModelError("Email", "Invalid Email/Password");
+        //             return RedirectToAction("login");
+        //             // handle failure (this should be similar to how "existing email" is handled)
+        //         }
+        //         else
+        //         {
+        //             return RedirectToAction("success");
+        //         }
+        //     }
+        //     else
+        //     {
+        //         return RedirectToAction("login");
+        //     }
+        [HttpPost("login")]
+        public IActionResult Login(LoginUser user)
         {
             if(ModelState.IsValid)
             {
-                // If inital ModelState is valid, query for a user with provided email
-                var userInDb = dbContext.Users.FirstOrDefault(u => u.Email == userSubmission.Email);
-                // If no user exists with provided email
-                if(userInDb == null)
+                User toLogin = dbContext.Users.FirstOrDefault(u => u.Email == user.Email);
+                if(toLogin == null)
                 {
-                    // Add an error to ModelState and return to View!
-                    ModelState.AddModelError("Email", "Invalid Email/Password");
-                    return RedirectToAction("login");
+                    ModelState.AddModelError("EmailAttempt", "Invalid Email/Password");
+                    return View("Login");
                 }
-                
-                // Initialize hasher object
-                var hasher = new PasswordHasher<LoginUser>();
-                
-                // verify provided password against hash stored in db
-                var result = hasher.VerifyHashedPassword(userSubmission, userInDb.Password, userSubmission.Password);
-                
-                // result can be compared to 0 for failure
-                if(result == 0)
+                PasswordHasher<LoginUser> hasher = new PasswordHasher<LoginUser>();
+                var result = hasher.VerifyHashedPassword(user, toLogin.Password, user.Password);
+                if(result == PasswordVerificationResult.Failed)
                 {
-                    ModelState.AddModelError("Email", "Invalid Email/Password");
-                    return RedirectToAction("login");
-                    // handle failure (this should be similar to how "existing email" is handled)
+                    ModelState.AddModelError("EmailAttempt", "Invalid Email/Password");
+                    return View("Login");
                 }
-                else
-                {
-                    return RedirectToAction("success");
-                }
+                // Log user into session
+                HttpContext.Session.SetInt32("userId", toLogin.UserId);
+                return RedirectToAction("Success");
             }
-            else
-            {
-                return RedirectToAction("login");
-            }
+            return View("Login");
         }
+        
     }
 }
